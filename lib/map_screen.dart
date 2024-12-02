@@ -72,8 +72,7 @@ class _MapScreenState extends State<MapScreen> {
         width: 80,
         height: 80,
         child: GestureDetector(
-          // onTap: () => _showMarkerInfo(markerData),
-          onTap: () {},
+          onTap: () => _showMarkerInfo(markerData),
           child: Column(
             children: [
               Container(
@@ -140,6 +139,7 @@ class _MapScreenState extends State<MapScreen> {
             TextButton(
               onPressed: () {
                 _addMarker(position, titleController.text, descController.text);
+                Navigator.pop(context);
               },
               child: Text('Save'),
             ),
@@ -198,7 +198,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _selectedPosition = location;
       _searchResult = [];
-      // _isSearching = false;
+      _isSearching = false;
       _searchController.clear();
     });
   }
@@ -224,8 +224,10 @@ class _MapScreenState extends State<MapScreen> {
               initialZoom: 13.0,
               initialCenter: LatLng(59.444957, 32.026417),
               onTap: (tapPosition, latlng) {
-                _selectedPosition = latlng;
-                _draggedPosition = _selectedPosition;
+                setState(() {
+                  _selectedPosition = latlng;
+                  _draggedPosition = _selectedPosition;
+                });
               },
             ),
             children: [
@@ -248,7 +250,142 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ],
                 ),
+              if (_myLocation != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      width: 80,
+                      height: 80,
+                      point: _myLocation!,
+                      child: Icon(
+                        Icons.location_on,
+                        color: Colors.green,
+                        size: 40,
+                      ),
+                    ),
+                  ],
+                ),
             ],
+          ),
+          Positioned(
+            top: 40,
+            left: 15,
+            right: 15,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 55,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                        hintText: 'Search place...',
+                        fillColor: Colors.white,
+                        filled: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(50),
+                          borderSide: BorderSide.none,
+                        ),
+                        prefixIcon: Icon(Icons.search),
+                        suffixIcon: _isSearching
+                            ? IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _isSearching = false;
+                                    _searchResult = [];
+                                  });
+                                },
+                                icon: Icon(Icons.clear))
+                            : null),
+                    onTap: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                    },
+                  ),
+                ),
+                if (_isSearching && _searchResult.isNotEmpty)
+                  Container(
+                    color: Colors.white,
+                    child: ListView.builder(
+                      itemCount: _searchResult.length,
+                      shrinkWrap: true,
+                      itemBuilder: (ctx, index) {
+                        final place = _searchResult[index];
+                        return ListTile(
+                          title: Text(place['display_name']),
+                          onTap: () {
+                            final lat = double.parse(place['lat']);
+                            final lon = double.parse(place['lon']);
+                            _moveToLocation(lat, lon);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          _isDragging == false
+              ? Positioned(
+                  bottom: 20,
+                  left: 20,
+                  child: FloatingActionButton(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                    onPressed: () {
+                      setState(() {
+                        _isDragging = true;
+                      });
+                    },
+                    child: Icon(Icons.add_location),
+                  ),
+                )
+              : Positioned(
+                  bottom: 20,
+                  left: 20,
+                  child: FloatingActionButton(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    onPressed: () {
+                      setState(() {
+                        _isDragging = false;
+                      });
+                    },
+                    child: Icon(Icons.wrong_location),
+                  ),
+                ),
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: Column(
+              children: [
+                FloatingActionButton(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.indigo,
+                  onPressed: _showCurrentLocation,
+                  child: Icon(Icons.location_searching_rounded),
+                ),
+                if (_isDragging)
+                  Padding(
+                    padding: EdgeInsets.only(top: 20),
+                    child: FloatingActionButton(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      onPressed: () {
+                        if (_draggedPosition != null) {
+                          _showMarkerDialog(context, _draggedPosition!);
+                        }
+                        setState(() {
+                          _isDragging = false;
+                          _draggedPosition = null;
+                        });
+                      },
+                      child: Icon(Icons.check),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
